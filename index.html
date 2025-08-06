@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" class=""><head><script>window.livecodes = window.livecodes || {};</script><title>Untitled Project</title><meta name="title" content="Untitled Project"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script><script type="importmap">{
+  "imports": {}
+}</script></head><body>
+
+
+  <title>Interest-Based Perchance Video</title>
+  <style>
+    body { margin: 0; background: black; color: white; font-family: sans-serif; }
+    #generatedFrame { display: block; margin: auto; max-width: 100vw; max-height: 100vh; object-fit: contain; }
+    #status { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 8px; z-index: 10; }
+  </style>
+
+
+
+<div id="status">Initializing camera...</div>
+<video id="videoFeed" autoplay="" muted="" playsinline="" style="display:none;"></video>
+<img id="generatedFrame" src="" alt="Generated frame">
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
+
+<script>
+const perchanceBase = "https://perchance.org/ai-text-to-image-generator#interest=";
+
+const video = document.getElementById('videoFeed');
+const imgOutput = document.getElementById('generatedFrame');
+const statusDiv = document.getElementById('status');
+
+let model;
+let interestScore = 0;
+let lastFaceSize = null;
+
+async function setupCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  video.srcObject = stream;
+  await new Promise(resolve => video.onloadedmetadata = resolve);
+}
+
+function estimateFaceSize(landmarks) {
+  const left = landmarks[234];  // left cheek
+  const right = landmarks[454]; // right cheek
+  const dx = right.x - left.x;
+  const dy = right.y - left.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function updateInterest(currentSize) {
+  if (lastFaceSize == null) {
+    lastFaceSize = currentSize;
+    return;
+  }
+  const delta = currentSize - lastFaceSize;
+  lastFaceSize = currentSize;
+
+  if (delta > 0.001) interestScore++;
+  else if (delta < -0.001) interestScore--;
+
+  interestScore = Math.max(-10, Math.min(10, interestScore));
+}
+
+async function screenshotPerchancePage(interestLevel) {
+  const url = perchanceBase + encodeURIComponent(interestLevel);
+
+  const iframe = document.createElement("iframe");
+  iframe.src = url;
+  iframe.width = 800;
+  iframe.height = 600;
+  iframe.style.display = "none";
+  document.body.appendChild(iframe);
+
+  // Wait for image inside Perchance to load
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const img = iframeDoc.querySelector('img');
+        if (img) {
+          resolve(img.src);
+        } else {
+          reject("No image found in iframe");
+        }
+      } catch (e) {
+        reject("Cross-origin error or failed to fetch image");
+      } finally {
+        document.body.removeChild(iframe);
+      }
+    }, 2000); // Give it time to load and render
+  });
+}
+
+async function mainLoop() {
+  const predictions = await model.estimateFaces({ input: video });
+  if (predictions.length > 0) {
+    const face = predictions[0];
+    const size = estimateFaceSize(face.scaledMesh);
+    updateInterest(size);
+  }
+
+  statusDiv.innerText = `Interest: ${interestScore}`;
+
+  try {
+    const imgURL = await screenshotPerchancePage(interestScore);
+    imgOutput.src = imgURL;
+  } catch (err) {
+    console.warn("Failed to get image from Perchance:", err);
+  }
+
+  setTimeout(mainLoop, 1000); // Next frame in 1s
+}
+
+async function init() {
+  await setupCamera();
+  model = await facemesh.load();
+  mainLoop();
+}
+
+init();
+</script>
+
+
+<script src="./script.js"></script></body></html>
