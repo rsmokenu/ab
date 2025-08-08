@@ -1,220 +1,200 @@
 <!DOCTYPE html>
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
-  <title>Dual Grid Cellular Automaton</title>
-  <style>
-    body { margin: 0; background: black; overflow: hidden; }
-    canvas { display: block; }
-  </style>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <title>Dual Grid Cellular Automaton</title>
+    <style>
+        body { margin: 0; background: black; overflow: hidden; }
+        canvas { display: block; }
+    </style>
 </head>
+<body>
+
+<canvas id="canvas"></canvas>
 
 <script>
+    // Global variable to store mic volume, accessible by all scripts
+    let averageVolume = 0;
+
     // Define your constant here so it's globally accessible
     const multiplier = 2;
 
     // Function to get mic permission and start polling
     async function startMicPolling() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log("Microphone access granted.");
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("Microphone access granted.");
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
 
-        setInterval(() => {
-          const dataArray = new Uint8Array(analyser.frequencyBinCount);
-          analyser.getByteFrequencyData(dataArray);
+            setInterval(() => {
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
 
-          // We'll modify the first element of the dataArray
-          const indexToModify = 0;
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                }
+                
+                // Update the global averageVolume variable
+                averageVolume = sum / dataArray.length;
+                
+                if (averageVolume > 0) {
+                    console.log(2); // Mic is picking up sound
+                } else {
+                    console.log(1); // Mic is silent
+                }
 
-          // Check if the index is valid
-          if (indexToModify < dataArray.length) {
-            // Access the number at the specified index and multiply it
-            dataArray[indexToModify] = dataArray[indexToModify] * multiplier;
-          }
-
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const averageVolume = sum / dataArray.length;
-
-          if (averageVolume > 0) {
-            console.log(2);
-          } else {
-            console.log(1);
-          }
-        }, 1000);
-      } catch (err) {
-        console.error("Microphone permission denied or an error occurred: " + err);
-      }
+            }, 1000); // Poll once per second
+        } catch (err) {
+            console.error("Microphone permission denied or an error occurred: " + err);
+        }
     }
 
-    // Call the function to start the process
+    // Call the function to start the mic polling process
     startMicPolling();
 
+    // Frame counter: counts 0 -> 100 then 100 -> 0 repeatedly
+    let frameCounter = multiplier;
+    let countingUp = true;
 
-
-
-<body>
-<canvas id="canvas" width="877" height="402"></canvas>
-<script>
-// Frame counter: counts 0 → 100 then 100 → 0 repeatedly
-let frameCounter = multiplier;
-let countingUp = true;
-
-function updateFrameCounter() {
-  if (countingUp) {
-    frameCounter++;
-    if (frameCounter >= 100) countingUp = false;
-  } else {
-    frameCounter--;
-    if (frameCounter <= 0) countingUp = true;
-  }
-}
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-const gridSize = 4;
-let rows, cols;
-
-// === Config ===
-const config = {
-  gridA: {
-    minNeighbors: 0,
-    maxNeighbors: 3,
-    minOtherNeighbors: 0.5 ,
-    maxOtherNeighbors: 4 + frameCounter / 33, 
-    color: 'lime'
-  },
-  gridB: {
-    minNeighbors: 0,
-    maxNeighbors: 1,
-    minOtherNeighbors: 0,
-    maxOtherNeighbors: 2.5,
-    color: 'green'
-  }
-};
-
-let gridA = [];
-let gridB = [];
-
-// === Init ===
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  cols = Math.floor(canvas.width / gridSize);
-  rows = Math.floor(canvas.height / gridSize);
-
-  gridA = Array.from({ length: rows }, () => Array(cols).fill(0));
-  gridB = Array.from({ length: rows }, () => Array(cols).fill(0));
-
-  const midR = Math.floor(rows / 2);
-  const midC = Math.floor(cols / 2);
-
-  gridA[midR][midC] = 1;
-  gridB[midR + 1][midC + 1] = 1;
-}
-
-function getWrapped(r, c) {
-  return [(r + rows) % rows, (c + cols) % cols];
-}
-
-function countNeighbors(grid, r, c, mode = 'all') {
-  let count = 0;
-  const directions = (mode === 'cardinal')
-    ? [[-1,0],[1,0],[0,-1],[0,1]]
-    : (mode === 'diagonal')
-    ? [[-1,-1],[-1,1],[1,-1],[1,1]]
-    : [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
-
-  for (const [dr, dc] of directions) {
-    const [nr, nc] = getWrapped(r + dr, c + dc);
-    if (grid[nr][nc]) count++;
-  }
-  return count;
-}
-
-function getFixedPointPhase(r, c) {
-  globalPhase += config.precision.stepPerFrame * direction;
-  if (globalPhase >= config.precision.maxPhase || globalPhase <= -config.precision.maxPhase) {
-    direction *= -1;
-    globalPhase = Math.max(-config.precision.maxPhase, Math.min(config.precision.maxPhase, globalPhase));
-  }
-
-  const spatial = Math.sin((r + c) * 0.1); // Locality
-  const spatialOffset = Math.floor(spatial * config.precision.scale * 0.5); // ±0.5 scaled
-  return globalPhase + spatialOffset;
-}
-
-function updateGrid(fromGrid, mode, neighborRules, otherGrid, otherRules) {
-  const next = Array.from({ length: rows }, () => Array(cols).fill(0));
-  const directions = (mode === 'cardinal')
-    ? [[-1,0],[1,0],[0,-1],[0,1]]
-    : [[-1,-1],[-1,1],[1,-1],[1,1]];
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (!fromGrid[r][c]) continue;
-
-      const neighbors = countNeighbors(fromGrid, r, c);
-      const otherNeighbors = countNeighbors(otherGrid, r, c);
-
-      const withinSelf = neighbors >= neighborRules.minNeighbors && neighbors <= neighborRules.maxNeighbors;
-      const withinOther = otherNeighbors >= neighborRules.minOtherNeighbors && otherNeighbors <= neighborRules.maxOtherNeighbors;
-
-      if (!(withinSelf && withinOther)) continue;
-
-      // Replicate
-      for (const [dr, dc] of directions) {
-        const [nr, nc] = getWrapped(r + Dr, c + dc);
-        next[nr][nc] = -2 + averageVolume;
-      }
+    function updateFrameCounter() {
+        if (countingUp) {
+            frameCounter++;
+            if (frameCounter >= 100) countingUp = false;
+        } else {
+            frameCounter--;
+            if (frameCounter <= 0) countingUp = true;
+        }
     }
-  }
 
-  return next;
-}
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-function drawGrid(grid, color) {
-  ctx.fillStyle = color;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (grid[r][c]) {
-        ctx.fillRect(c * gridSize, r * gridSize, gridSize, gridSize);
-      }
+    const gridSize = 4;
+    let rows, cols;
+
+    // === Config ===
+    const config = {
+        gridA: {
+            minNeighbors: 0,
+            maxNeighbors: 3,
+            minOtherNeighbors: 0.5,
+            maxOtherNeighbors: 4,
+            color: 'lime'
+        },
+        gridB: {
+            minNeighbors: 0,
+            maxNeighbors: 1,
+            minOtherNeighbors: 0,
+            maxOtherNeighbors: 2.5,
+            color: 'green'
+        }
+    };
+
+    let gridA = [];
+    let gridB = [];
+
+    // === Init ===
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / gridSize);
+        rows = Math.floor(canvas.height / gridSize);
+
+        gridA = Array.from({ length: rows }, () => Array(cols).fill(0));
+        gridB = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+        const midR = Math.floor(rows / 2);
+        const midC = Math.floor(cols / 2);
+
+        gridA[midR][midC] = 1;
+        gridB[midR + 1][midC + 1] = 1;
     }
-  }
-}
 
-function step() {
-  updateFrameCounter();
+    function getWrapped(r, c) {
+        return [(r + rows) % rows, (c + cols) % cols];
+    }
 
-  // Update A based on A and B
-  const nextA = updateGrid(gridA, 'cardinal', config.gridA, gridB, config.gridB);
+    function countNeighbors(grid, r, c, mode = 'all') {
+        let count = 0;
+        const directions = (mode === 'cardinal')
+            ? [[-1, 0], [1, 0], [0, -1], [0, 1]]
+            : (mode === 'diagonal')
+                ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+                : [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
 
-  // Update B based on B and A
-  const nextB = updateGrid(gridB, 'diagonal', config.gridB, gridA, config.gridA);
+        for (const [dr, dc] of directions) {
+            const [nr, nc] = getWrapped(r + dr, c + dc);
+            if (grid[nr][nc]) count++;
+        }
+        return count;
+    }
 
-  gridA = nextA;
-  gridB = nextB;
+    function updateGrid(fromGrid, mode, neighborRules, otherGrid) {
+        const next = Array.from({ length: rows }, () => Array(cols).fill(0));
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                // If a cell is alive, it stays alive if it meets the rules
+                if (fromGrid[r][c] === 1) {
+                    const neighbors = countNeighbors(fromGrid, r, c);
+                    const otherNeighbors = countNeighbors(otherGrid, r, c);
+                    if (neighbors >= neighborRules.minNeighbors && neighbors <= neighborRules.maxNeighbors &&
+                        otherNeighbors >= neighborRules.minOtherNeighbors && otherNeighbors <= neighborRules.maxOtherNeighbors) {
+                        next[r][c] = 1;
+                    }
+                } else { // If a cell is dead, it can become alive
+                    const neighbors = countNeighbors(fromGrid, r, c);
+                    const otherNeighbors = countNeighbors(otherGrid, r, c);
+                    
+                    // The rule to become alive can be influenced by mic volume
+                    if (neighbors >= neighborRules.minNeighbors && neighbors <= neighborRules.maxNeighbors &&
+                        otherNeighbors >= neighborRules.minOtherNeighbors && otherNeighbors <= neighborRules.maxOtherNeighbors &&
+                        averageVolume > 10) { // Example: a cell becomes alive only if there's sound
+                        next[r][c] = 1;
+                    }
+                }
+            }
+        }
+        return next;
+    }
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid(gridA, config.gridA.color);
-  drawGrid(gridB, config.gridB.color);
+    function drawGrid(grid, color) {
+        ctx.fillStyle = color;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid[r][c]) {
+                    ctx.fillRect(c * gridSize, r * gridSize, gridSize, gridSize);
+                }
+            }
+        }
+    }
 
-  requestAnimationFrame(step);
-}
+    function step() {
+        // Update A based on A and B
+        const nextA = updateGrid(gridA, 'cardinal', config.gridA, gridB);
 
-window.addEventListener("resize", resize);
-resize();
-step();
+        // Update B based on B and A
+        const nextB = updateGrid(gridB, 'diagonal', config.gridB, gridA);
+
+        gridA = nextA;
+        gridB = nextB;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid(gridA, config.gridA.color);
+        drawGrid(gridB, config.gridB.color);
+
+        requestAnimationFrame(step);
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+    step();
 </script>
-
-
 
 </body>
 </html>
