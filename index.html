@@ -3,6 +3,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script><script type="importmap">{
   "imports": {}
 }</script></head><body>
+<script>window.livecodes = window.livecodes || {};</script><title>Untitled Project</title><meta name="title" content="Untitled Project"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script>
 
 
   <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
@@ -18,9 +20,19 @@
 
 <script>
     // A global variable to store the microphone's volume
-    let globalVolume = 0;
-
-    // Mic polling function, now simplified
+    var globalVolume = 0.1;
+    var frameCounter = 0;
+    let countingUp = true;
+    function updateFrameCounter() {
+      if (countingUp) {
+        frameCounter++;
+        if (frameCounter > 10) countingUp = false;
+      } else {
+        frameCounter--;
+        if (frameCounter <= 0) countingUp = true;
+      }
+    }
+  
     async function startMicPolling() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -36,17 +48,18 @@
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) {
             sum += dataArray[i];
-          }
+          }    // Initial value from 'multiplier'
+    
           globalVolume = sum+dataArray.length;
           
           // Debugging output: log the volume
-          if (globalVolume > 1) {
+          if (globalVolume <= 10) {
             console.log(2);
           } else {
             console.log(1);
           }
 
-        }, 100); // Poll once per second
+        }, 1200); // Poll once per second
       } catch (err) {
         console.error("Microphone permission denied or an error occurred: " + err);
       }
@@ -56,18 +69,8 @@
     startMicPolling();
 
     // Frame counter: counts 0 -> 100 then 100 -> 0 repeatedly
-    let frameCounter = 2; // Initial value from 'multiplier'
-    let countingUp = true;
 
-    function updateFrameCounter() {
-      if (countingUp) {
-        frameCounter++;
-        if (frameCounter >= 100) countingUp = false;
-      } else {
-        frameCounter--;
-        if (frameCounter <= 0) countingUp = true;
-      }
-    }
+
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -80,14 +83,14 @@
       gridA: {
         minNeighbors: 0,
         maxNeighbors: 3,
-        minOtherNeighbors: 0.5,
-        maxOtherNeighbors: 4, 
+        minOtherNeighbors: 0.5 + globalVolume,
+        maxOtherNeighbors: 5 - globalVolume, 
         color: 'lime'
       },
       gridB: {
         minNeighbors: 0,
         maxNeighbors: 1,
-        minOtherNeighbors: 0,
+        minOtherNeighbors: 0 + globalVolume,
         maxOtherNeighbors: 2.5,
         color: 'green'
       }
@@ -155,7 +158,7 @@
             const [nr, nc] = getWrapped(r + dr, c + dc);
             // This is where we use the globalVolume to influence the outcome.
             // For example, if volume is high, cells are more likely to replicate.
-            if (globalVolume > -2) { 
+            if (globalVolume  > 1) { 
                  next[nr][nc] = 1; 
             }
           }
@@ -176,7 +179,7 @@
     }
 
     function step() {
-      // updateFrameCounter(); - This was causing issues and isn't needed for mic logic
+   
       
       // Update Grid A and Grid B, now potentially influenced by globalVolume
       const nextA = updateGrid(gridA, 'cardinal', config.gridA, gridB);
@@ -199,4 +202,4 @@
 
 
 
-<script src="./script.js"></script></body></html>
+<script src="./script.js"></script><script src="./script.js"></script></body></html>
