@@ -1,119 +1,166 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <title>Interest-Based Perchance Video</title>
+<!-- saved from url=(0043)file:///C:/Users/fogen/Downloads/JOBBI.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+  <title>Dual Grid Cellular Automaton</title>
   <style>
-    body { margin: 0; background: black; color: white; font-family: sans-serif; }
-    #generatedFrame { display: block; margin: auto; max-width: 100vw; max-height: 100vh; object-fit: contain; }
-    #status { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 8px; z-index: 10; }
+    body { margin: 0; background: black; overflow: hidden; }
+    canvas { display: block; }
   </style>
 </head>
 <body>
-
-<div id="status">Initializing camera...</div>
-<video id="videoFeed" autoplay muted playsinline style="display:none;"></video>
-<img id="generatedFrame" src="" alt="Generated frame"/>
-
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh"></script>
-
+<canvas id="canvas" width="877" height="402"></canvas>
 <script>
-const perchanceBase = "https://perchance.org/ai-text-to-image-generator#interest=";
+// Frame counter: counts 0 → 100 then 100 → 0 repeatedly
+let frameCounter = 0;
+let countingUp = true;
 
-const video = document.getElementById('videoFeed');
-const imgOutput = document.getElementById('generatedFrame');
-const statusDiv = document.getElementById('status');
-
-let model;
-let interestScore = 0;
-let lastFaceSize = null;
-
-async function setupCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  await new Promise(resolve => video.onloadedmetadata = resolve);
-}
-
-function estimateFaceSize(landmarks) {
-  const left = landmarks[234];  // left cheek
-  const right = landmarks[454]; // right cheek
-  const dx = right.x - left.x;
-  const dy = right.y - left.y;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-function updateInterest(currentSize) {
-  if (lastFaceSize == null) {
-    lastFaceSize = currentSize;
-    return;
+function updateFrameCounter() {
+  if (countingUp) {
+    frameCounter++;
+    if (frameCounter >= 100) countingUp = false;
+  } else {
+    frameCounter--;
+    if (frameCounter <= 0) countingUp = true;
   }
-  const delta = currentSize - lastFaceSize;
-  lastFaceSize = currentSize;
-
-  if (delta > 0.001) interestScore++;
-  else if (delta < -0.001) interestScore--;
-
-  interestScore = Math.max(-10, Math.min(10, interestScore));
 }
 
-async function screenshotPerchancePage(interestLevel) {
-  const url = perchanceBase + encodeURIComponent(interestLevel);
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-  const iframe = document.createElement("iframe");
-  iframe.src = url;
-  iframe.width = 800;
-  iframe.height = 600;
-  iframe.style.display = "none";
-  document.body.appendChild(iframe);
+const gridSize = 4;
+let rows, cols;
 
-  // Wait for image inside Perchance to load
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        const img = iframeDoc.querySelector('img');
-        if (img) {
-          resolve(img.src);
-        } else {
-          reject("No image found in iframe");
-        }
-      } catch (e) {
-        reject("Cross-origin error or failed to fetch image");
-      } finally {
-        document.body.removeChild(iframe);
+// === Config ===
+const config = {
+  gridA: {
+    minNeighbors: 0,
+    maxNeighbors: 3,
+    minOtherNeighbors: 0.5 ,
+    maxOtherNeighbors: 4 + frameCounter / 33, 
+    color: 'lime'
+  },
+  gridB: {
+    minNeighbors: 0,
+    maxNeighbors: 1,
+    minOtherNeighbors: 0,
+    maxOtherNeighbors: 2.5,
+    color: 'green'
+  }
+};
+
+let gridA = [];
+let gridB = [];
+
+// === Init ===
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  cols = Math.floor(canvas.width / gridSize);
+  rows = Math.floor(canvas.height / gridSize);
+
+  gridA = Array.from({ length: rows }, () => Array(cols).fill(0));
+  gridB = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  const midR = Math.floor(rows / 2);
+  const midC = Math.floor(cols / 2);
+
+  gridA[midR][midC] = 1;
+  gridB[midR + 1][midC + 1] = 1;
+}
+
+function getWrapped(r, c) {
+  return [(r + rows) % rows, (c + cols) % cols];
+}
+
+function countNeighbors(grid, r, c, mode = 'all') {
+  let count = 0;
+  const directions = (mode === 'cardinal')
+    ? [[-1,0],[1,0],[0,-1],[0,1]]
+    : (mode === 'diagonal')
+    ? [[-1,-1],[-1,1],[1,-1],[1,1]]
+    : [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+
+  for (const [dr, dc] of directions) {
+    const [nr, nc] = getWrapped(r + dr, c + dc);
+    if (grid[nr][nc]) count++;
+  }
+  return count;
+}
+
+function getFixedPointPhase(r, c) {
+  globalPhase += config.precision.stepPerFrame * direction;
+  if (globalPhase >= config.precision.maxPhase || globalPhase <= -config.precision.maxPhase) {
+    direction *= -1;
+    globalPhase = Math.max(-config.precision.maxPhase, Math.min(config.precision.maxPhase, globalPhase));
+  }
+
+  const spatial = Math.sin((r + c) * 0.1); // Locality
+  const spatialOffset = Math.floor(spatial * config.precision.scale * 0.5); // ±0.5 scaled
+  return globalPhase + spatialOffset;
+}
+
+function updateGrid(fromGrid, mode, neighborRules, otherGrid, otherRules) {
+  const next = Array.from({ length: rows }, () => Array(cols).fill(0));
+  const directions = (mode === 'cardinal')
+    ? [[-1,0],[1,0],[0,-1],[0,1]]
+    : [[-1,-1],[-1,1],[1,-1],[1,1]];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!fromGrid[r][c]) continue;
+
+      const neighbors = countNeighbors(fromGrid, r, c);
+      const otherNeighbors = countNeighbors(otherGrid, r, c);
+
+      const withinSelf = neighbors >= neighborRules.minNeighbors && neighbors <= neighborRules.maxNeighbors;
+      const withinOther = otherNeighbors >= neighborRules.minOtherNeighbors && otherNeighbors <= neighborRules.maxOtherNeighbors;
+
+      if (!(withinSelf && withinOther)) continue;
+
+      // Replicate
+      for (const [dr, dc] of directions) {
+        const [nr, nc] = getWrapped(r + dr, c + dc);
+        next[nr][nc] = -1;
       }
-    }, 2000); // Give it time to load and render
-  });
-}
-
-async function mainLoop() {
-  const predictions = await model.estimateFaces({ input: video });
-  if (predictions.length > 0) {
-    const face = predictions[0];
-    const size = estimateFaceSize(face.scaledMesh);
-    updateInterest(size);
+    }
   }
 
-  statusDiv.innerText = `Interest: ${interestScore}`;
+  return next;
+}
 
-  try {
-    const imgURL = await screenshotPerchancePage(interestScore);
-    imgOutput.src = imgURL;
-  } catch (err) {
-    console.warn("Failed to get image from Perchance:", err);
+function drawGrid(grid, color) {
+  ctx.fillStyle = color;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c]) {
+        ctx.fillRect(c * gridSize, r * gridSize, gridSize, gridSize);
+      }
+    }
   }
-
-  setTimeout(mainLoop, 1000); // Next frame in 1s
 }
 
-async function init() {
-  await setupCamera();
-  model = await facemesh.load();
-  mainLoop();
+function step() {
+  updateFrameCounter();
+
+  // Update A based on A and B
+  const nextA = updateGrid(gridA, 'cardinal', config.gridA, gridB, config.gridB);
+
+  // Update B based on B and A
+  const nextB = updateGrid(gridB, 'diagonal', config.gridB, gridA, config.gridA);
+
+  gridA = nextA;
+  gridB = nextB;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid(gridA, config.gridA.color);
+  drawGrid(gridB, config.gridB.color);
+
+  requestAnimationFrame(step);
 }
 
-init();
+window.addEventListener("resize", resize);
+resize();
+step();
 </script>
-</body>
-</html>
+
+</body></html>
