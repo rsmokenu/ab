@@ -154,7 +154,7 @@
                     // The rule to become alive can be influenced by mic volume
                     if (neighbors >= neighborRules.minNeighbors && neighbors <= neighborRules.maxNeighbors &&
                         otherNeighbors >= neighborRules.minOtherNeighbors && otherNeighbors <= neighborRules.maxOtherNeighbors &&
-                        averageVolume > 10) { // Example: a cell becomes alive only if there's sound
+                        averageVolume > 1) { // Example: a cell becomes alive only if there's sound
                         next[r][c] = 1;
                     }
                 }
