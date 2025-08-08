@@ -79,14 +79,14 @@
     // === Config ===
     const config = {
       gridA: {
-        minNeighbors: 0,
+        minNeighbors: -1 + globalVolume,
         maxNeighbors: 3,
         minOtherNeighbors: 0.5 + globalVolume,
-        maxOtherNeighbors: 5 - globalVolume, 
+        maxOtherNeighbors: 5 / globalVolume, 
         color: 'lime'
       },
       gridB: {
-        minNeighbors: 0,
+        minNeighbors:  -1 + globalVolume,
         maxNeighbors: 1,
         minOtherNeighbors: 0 + globalVolume,
         maxOtherNeighbors: 2.5,
@@ -156,7 +156,7 @@
             const [nr, nc] = getWrapped(r + dr, c + dc);
             // This is where we use the globalVolume to influence the outcome.
             // For example, if volume is high, cells are more likely to replicate.
-            if (globalVolume  > 1) { 
+            if (globalVolume  > 0.1) { 
                  next[nr][nc] = 1; 
             }
           }
