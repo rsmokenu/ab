@@ -1,4 +1,56 @@
 <!DOCTYPE html>
+<html>
+<body>
+
+<script>
+    // Define your constant here so it's globally accessible
+    const multiplier = 2;
+
+    // Function to get mic permission and start polling
+    async function startMicPolling() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Microphone access granted.");
+
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        setInterval(() => {
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(dataArray);
+
+          // We'll modify the first element of the dataArray
+          const indexToModify = 0;
+
+          // Check if the index is valid
+          if (indexToModify < dataArray.length) {
+            // Access the number at the specified index and multiply it
+            dataArray[indexToModify] = dataArray[indexToModify] * multiplier;
+          }
+
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const averageVolume = sum / dataArray.length;
+
+          if (averageVolume > 0) {
+            console.log(2);
+          } else {
+            console.log(1);
+          }
+        }, 1000);
+      } catch (err) {
+        console.error("Microphone permission denied or an error occurred: " + err);
+      }
+    }
+
+    // Call the function to start the process
+    startMicPolling();
+</script>
+  <!DOCTYPE html>
 <!-- saved from url=(0043)file:///C:/Users/fogen/Downloads/JOBBI.html -->
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
   <title>Dual Grid Cellular Automaton</title>
@@ -11,7 +63,7 @@
 <canvas id="canvas" width="877" height="402"></canvas>
 <script>
 // Frame counter: counts 0 → 100 then 100 → 0 repeatedly
-let frameCounter = 0;
+let frameCounter = multiplier;
 let countingUp = true;
 
 function updateFrameCounter() {
@@ -119,8 +171,8 @@ function updateGrid(fromGrid, mode, neighborRules, otherGrid, otherRules) {
 
       // Replicate
       for (const [dr, dc] of directions) {
-        const [nr, nc] = getWrapped(r + dr, c + dc);
-        next[nr][nc] = -1;
+        const [nr, nc] = getWrapped(r + Dr, c + dc);
+        next[nr][nc] = -2 + averageVolume;
       }
     }
   }
@@ -163,4 +215,7 @@ resize();
 step();
 </script>
 
-</body></html>
+
+
+</body>
+</html>
