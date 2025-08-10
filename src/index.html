@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class=""><head><meta name="title" content="Untitled Project"><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""imports": {}
+<html lang="en" class=""><head><script>window.livecodes = window.livecodes || {};</script><title>Untitled Project</title><meta name="title" content="Untitled Project"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script><script type="importmap">{
+  "imports": {}
+}</script></head><body>
 <meta name="title" content="Untitled Project"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async="" imports":="" {}="" <meta="" name="title" content="Untitled Project"><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js" async=""></script>
 
 
@@ -66,9 +69,18 @@
     // Start the mic polling process
     startMicPolling();
 
-    // Frame counter: counts 0 -> 100 then 100 -> 0 repeatedly
+    if ("AmbientLightSensor" in window) {
+  const sensor = new AmbientLightSensor();
+  sensor.addEventListener("reading", (event) => {
+    console.log("Current light level:", sensor.illuminance);
+  });
+  sensor.addEventListener("error", (event) => {
+    console.log(event.error.name, event.error.message);
+  });
+  sensor.start();
 
-
+globalVolume = sensor.illuminance;
+}
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -81,7 +93,7 @@
       gridA: {
         minNeighbors: -1 + globalVolume,
         maxNeighbors: 3,
-        minOtherNeighbors: 0.5 + globalVolume,
+        minOtherNeighbors: 0 + globalVolume,
         maxOtherNeighbors: 5 / globalVolume, 
         color: 'lime'
       },
@@ -200,4 +212,4 @@
 
 
 
-<script src="./script.js"></script><script src="./script.js"></script></body></html>
+<script src="./script.js"></script><script src="./script.js"></script><script src="./script.js"></script></body></html>
