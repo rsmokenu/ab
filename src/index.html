@@ -54,13 +54,13 @@
           globalVolume = sum+dataArray.length;
           
           // Debugging output: log the volume
-          if (globalVolume <= 10) {
+          if (globalVolume > 0.1) {
             console.log(2);
           } else {
             console.log(1);
           }
 
-        }, 1200); // Poll once per second
+        }, 490); // Poll once per second
       } catch (err) {
         console.error("Microphone permission denied or an error occurred: " + err);
       }
@@ -79,7 +79,8 @@
   });
   sensor.start();
 
-globalVolume = sensor.illuminance;
+sensor.addEventListener("reading", (event) );
+globalVolume = event;
 }
 
     const canvas = document.getElementById("canvas");
