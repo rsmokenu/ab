@@ -32,7 +32,7 @@
         if (frameCounter > 25) countingUp = false;
       } else {
         frameCounter--;
-        if (frameCounter <= 0) countingUp = true;
+        if (frameCounter <= -8) countingUp = true;
       }
     }
   
@@ -59,10 +59,10 @@
           if (globalVolume > 0.1) {
             console.log(2);
           } else {
-            console.log(1);
+            console.log(globalVolume + 1);
           }
 
-        }, 490); // Poll once per second
+        }, 490 ** globalVolume); // Poll once per second
       } catch (err) {
         console.error("Microphone permission denied or an error occurred: " + err);
       }
@@ -88,23 +88,23 @@ globalVolume = event;
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 4;
+    const gridSize = 6;
     let rows, cols;
 
     // === Config ===
     const config = {
       gridA: {
-        minNeighbors: -1 + globalVolume,
+        minNeighbors: -2 + globalVolume,
         maxNeighbors: 3,
-        minOtherNeighbors: 0 + globalVolume,
-        maxOtherNeighbors: 5 / globalVolume, 
+        minOtherNeighbors: 0.2 - globalVolume,
+        maxOtherNeighbors: 5 - globalVolume, 
         color: 'lime'
       },
       gridB: {
         minNeighbors:  -1 + globalVolume,
         maxNeighbors: 1,
         minOtherNeighbors: 0 + globalVolume,
-        maxOtherNeighbors: 2.5,
+        maxOtherNeighbors: 2.5 - globalVolume,
         color: 'green'
       }
     };
