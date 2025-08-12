@@ -87,7 +87,7 @@ console.log(sensor.illuminsnce)
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 7;
+    const gridSize = 4;
     let rows, cols;
 
     // === Config ===
@@ -95,14 +95,14 @@ console.log(sensor.illuminsnce)
       gridA: {
         minNeighbors: 0 + globalVolume,
         maxNeighbors: 3,
-        minOtherNeighbors: 0.2 - globalVolume,
-        maxOtherNeighbors: 5 - globalVolume, 
+        minOtherNeighbors: 1 - globalVolume,
+        maxOtherNeighbors: 5 + globalVolume, 
         color: 'lime'
       },
       gridB: {
-        minNeighbors: 0.1 * globalVolume,
-        maxNeighbors: 1 + globalVolume,
-        minOtherNeighbors: 0.1 * globalVolume,
+        minNeighbors: 0,
+        maxNeighbors: 1,
+        minOtherNeighbors: 0.5 + globalVolume,
         maxOtherNeighbors: 2.5 - globalVolume,
         color: 'green'
       }
@@ -170,7 +170,7 @@ console.log(sensor.illuminsnce)
             const [nr, nc] = getWrapped(r + dr, c + dc);
             // This is where we use the globalVolume to influence the outcome.
             // For example, if volume is high, cells are more likely to replicate.
-            if (globalVolume < 3) { 
+            if(globalVolume < 3) { 
                  next[nr][nc] = 1; 
             }
           }
