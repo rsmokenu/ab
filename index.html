@@ -60,7 +60,7 @@ function startMicPolling() {
       // Smooth with simple exponential moving average
       smoothedVolume = smoothedVolume * 0.8 + average * 0.2;
 
-      globalVolume = 1 + smoothedVolume / 256; // normalize 0–1
+      globalVolume = smoothedVolume / 256; // normalize 0–1
 
       requestAnimationFrame(updateVolume);
     }
@@ -87,7 +87,7 @@ console.log(sensor.illuminsnce)
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 4;
+    const gridSize = 6;
     let rows, cols;
 
     // === Config ===
