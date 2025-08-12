@@ -86,7 +86,7 @@ console.log(sensor.illuminsnce)
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 3;
+    const gridSize = 7;
     let rows, cols;
 
     // === Config ===
@@ -100,8 +100,8 @@ console.log(sensor.illuminsnce)
       },
       gridB: {
         minNeighbors: 0.1 * globalVolume,
-        maxNeighbors: 1,
-        minOtherNeighbors: 0 + globalVolume,
+        maxNeighbors: 1 + globalVolume,
+        minOtherNeighbors: 0.1 * globalVolume,
         maxOtherNeighbors: 2.5 - globalVolume,
         color: 'green'
       }
