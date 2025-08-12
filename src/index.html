@@ -80,13 +80,13 @@ startMicPolling();
   sensor.start();
 
 sensor.addEventListener("reading", (event) );
-console.log(sensor)
+console.log(sensor.illuminsnce)
 }
 
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
-    const gridSize = 6;
+    const gridSize = 3;
     let rows, cols;
 
     // === Config ===
@@ -169,7 +169,7 @@ console.log(sensor)
             const [nr, nc] = getWrapped(r + dr, c + dc);
             // This is where we use the globalVolume to influence the outcome.
             // For example, if volume is high, cells are more likely to replicate.
-            if (globalVolume + withinSelf + withinOther > 0) { 
+            if (globalVolume + withinSelf - withinOther < 3) { 
                  next[nr][nc] = 1; 
             }
           }
