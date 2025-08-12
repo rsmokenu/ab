@@ -169,7 +169,7 @@ console.log(sensor.illuminsnce)
             const [nr, nc] = getWrapped(r + dr, c + dc);
             // This is where we use the globalVolume to influence the outcome.
             // For example, if volume is high, cells are more likely to replicate.
-            if (globalVolume + withinSelf - withinOther < 3) { 
+            if (globalVolume < 2) { 
                  next[nr][nc] = 1; 
             }
           }
